@@ -16,7 +16,7 @@ class AuctionListing(models.Model):
     description = models.CharField(max_length=16)
     startBid = models.CharField(max_length=16)
     url = models.CharField(max_length=268)
-    user = models.ForeignKey(User, on_delete=models.DO_NOTHING)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     category = models.ForeignKey(Category, on_delete=models.DO_NOTHING, related_name="category")
 
 # class Bid():

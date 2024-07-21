@@ -1,0 +1,16 @@
+{% extends "auctions/layout.html" %}
+
+{% block body %}
+    <h2>Active Listings</h2>
+    <ul>
+        {% for auction in auctions %}
+        <p>Title: {{ auction.title }}</p>
+        <p>Description: {{ auction.description }}</p>
+        <p>Price: {{ auction.startBid }}</p>
+        <p>Image: {{ auction.url }}</p>
+        <img height="100" src={{auction.url}} alt="">
+        <p>Category: {{ auction.category }}</p>
+        {% endfor %}
+    </ul>
+    TODO
+{% endblock %}

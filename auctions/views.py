@@ -67,10 +67,15 @@ def register(request):
 def create_listing(request):
     if request.method == "POST":
         # try:
-            category = Category.objects.filter(name="Carro").first()
+            category = request.POST["category"]
+            category = Category.objects.filter(name=category).first()
             user = request.user
+            description = request.POST["description"]
+            title = request.POST["title"]
+            startBid = request.POST["starting_bid"]
+            url = request.POST["url"]
             # auctionListing = AuctionListing(title="asdasd", description="das", startBid="12", url="asd", category=category)
-            AuctionListing.objects.create(title="asdasd", description="das", startBid="12", user=user, url="asd", category=category)
+            AuctionListing.objects.create(title=title, description=description, startBid=startBid, user=user, url=url, category=category)
             return render(request, 'auctions/create_listing.html', {
                 "message": "Listing created successfuly!"
             })
@@ -80,3 +85,9 @@ def create_listing(request):
         #     })
     else:
         return render(request, "auctions/create_listing.html")
+    
+def listings(request, listing_id):
+    listing = AuctionListing.objects.get(pk=listing_id)
+    return render(request, "auctions/listings.html", {
+        "listing": listing
+    })

@@ -74,7 +74,6 @@ def create_listing(request):
             title = request.POST["title"]
             startBid = request.POST["starting_bid"]
             url = request.POST["url"]
-            # auctionListing = AuctionListing(title="asdasd", description="das", startBid="12", url="asd", category=category)
             AuctionListing.objects.create(title=title, description=description, startBid=startBid, user=user, url=url, category=category)
             return render(request, 'auctions/create_listing.html', {
                 "message": "Listing created successfuly!"
@@ -91,3 +90,13 @@ def listings(request, listing_id):
     return render(request, "auctions/listings.html", {
         "listing": listing
     })
+
+def watchlist(request, listing_id):
+    listing = AuctionListing.objects.get(pk=listing_id)
+    if request.method == "POST":
+        listing.usersWatching.add(request.user)
+        listing.save()
+        return HttpResponseRedirect(reverse("listings", args=(listing.id,)))
+    return render(request, "auctions/listings.html", {
+            "listing": listing
+        })

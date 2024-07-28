@@ -13,7 +13,7 @@
   <input class="form-control mb-2" type="text" name="bid" placeholder="Bid" />
   <input class="btn btn-primary" type="submit" value="Place Bid" />
 </form>
-<form action="{% url 'watchlist' listing.id %}" method="POST">
+<form action="{% url 'addRemoveWatchlist' listing.id %}" method="POST">
   {% csrf_token %}
   <input class="btn btn-primary" type="submit" value="Watchlist" />
 </form>

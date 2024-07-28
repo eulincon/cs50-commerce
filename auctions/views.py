@@ -87,6 +87,7 @@ def create_listing(request):
     
 def listings(request, listing_id):
     listing = AuctionListing.objects.get(pk=listing_id)
+    print(listing.watchers.all())
     return render(request, "auctions/listings.html", {
         "listing": listing
     })
@@ -94,12 +95,12 @@ def listings(request, listing_id):
 def addRemoveWatchlist(request, listing_id):
     listing = AuctionListing.objects.get(pk=listing_id)
     if request.method == "POST":
-        if(listing.usersWatching.contains(request.user)):
-            listing.usersWatching.remove(request.user)
+        if(listing.watchers.contains(request.user)):
+            listing.watchers.remove(request.user)
         else:
-            listing.usersWatching.add(request.user)
+            listing.watchers.add(request.user)
         listing.save()
-        print(request.user.watchlist.all())
+        print(listing.watchers.contains(request.user))
         return HttpResponseRedirect(reverse("listings", args=(listing.id,)))
     return render(request, "auctions/listings.html", {
             "listing": listing

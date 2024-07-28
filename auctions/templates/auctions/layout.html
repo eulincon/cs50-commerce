@@ -25,7 +25,11 @@
                     <a class="nav-link" href="{% url 'logout' %}">Log Out</a>
                 </li>
                 <li>
-                    <a class="nav-link" href="{% url 'watchlist' %}">Watchlist <span class="badge badge-secondary">{{ 5 }}</span></a>
+                    <a class="nav-link" href="{% url 'watchlist' %}">Watchlist 
+                        {% if user.watchlist.all.count != 0 %}
+                        <span class="badge badge-secondary">{{ user.watchlist.all.count }}</span>
+                        {% endif %}
+                    </a>
                 </li>
                 <li>
                     <a class="nav-link" href="{% url 'create_listing' %}">Create Listing</a>

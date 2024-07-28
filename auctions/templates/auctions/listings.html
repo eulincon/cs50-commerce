@@ -14,7 +14,10 @@
   <input class="btn btn-primary" type="submit" value="Place Bid" />
 </form>
 <form action="{% url 'addRemoveWatchlist' listing.id %}" method="POST">
-  {% csrf_token %}
-  <input class="btn btn-primary" type="submit" value="Watchlist" />
+  {% csrf_token %} {% if user in listing.watchers.all %}
+  <input class="btn btn-primary" type="submit" value="Remove Watchlist" />
+  {% else %}
+  <input class="btn btn-primary" type="submit" value="Add Watchlist" />
+  {% endif %}
 </form>
 {% endblock %}

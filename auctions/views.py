@@ -4,7 +4,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
 
-from .models import User, AuctionListing, Category
+from .models import User, AuctionListing
 
 
 def index(request):
@@ -68,7 +68,6 @@ def create_listing(request):
     if request.method == "POST":
         # try:
             category = request.POST["category"]
-            category = Category.objects.filter(name=category).first()
             user = request.user
             description = request.POST["description"]
             title = request.POST["title"]

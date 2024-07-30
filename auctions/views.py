@@ -4,7 +4,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
 
-from .models import User, AuctionListing, Category
+from .models import User, AuctionListing
 
 
 def index(request):
@@ -68,13 +68,11 @@ def create_listing(request):
     if request.method == "POST":
         # try:
             category = request.POST["category"]
-            category = Category.objects.filter(name=category).first()
             user = request.user
             description = request.POST["description"]
             title = request.POST["title"]
             startBid = request.POST["starting_bid"]
             url = request.POST["url"]
-            # auctionListing = AuctionListing(title="asdasd", description="das", startBid="12", url="asd", category=category)
             AuctionListing.objects.create(title=title, description=description, startBid=startBid, user=user, url=url, category=category)
             return render(request, 'auctions/create_listing.html', {
                 "message": "Listing created successfuly!"
@@ -88,6 +86,27 @@ def create_listing(request):
     
 def listings(request, listing_id):
     listing = AuctionListing.objects.get(pk=listing_id)
+    print(listing.watchers.all())
     return render(request, "auctions/listings.html", {
         "listing": listing
     })
+
+def addRemoveWatchlist(request, listing_id):
+    listing = AuctionListing.objects.get(pk=listing_id)
+    if request.method == "POST":
+        if(listing.watchers.contains(request.user)):
+            listing.watchers.remove(request.user)
+        else:
+            listing.watchers.add(request.user)
+        listing.save()
+        print(listing.watchers.contains(request.user))
+        return HttpResponseRedirect(reverse("listings", args=(listing.id,)))
+    return render(request, "auctions/listings.html", {
+            "listing": listing
+        })
+
+def watchlist(request):
+    watchlist = request.user.watchlist.all()
+    return render(request, "auctions/index.html", {
+            "auctions": watchlist
+        })

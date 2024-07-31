@@ -1,11 +1,31 @@
 from django.contrib.auth import authenticate, login, logout
 from django.db import IntegrityError
+from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
+from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
+from django import forms
 
-from .models import User, AuctionListing
+from .models import User, AuctionListing, Bid
 
+
+class BidForm(forms.ModelForm):
+    # Creates form for Bid model.
+    class Meta:
+        model = Bid
+        fields = ["price"]
+        labels = {
+            "price": _("")
+        }
+        widgets = {
+            "price": forms.NumberInput(attrs={
+                "placeholder": "Bid",
+                "min": 0.01,
+                "max": 1000000000,
+                "class": "form-control"
+            })
+        }
 
 def index(request):
     return render(request, "auctions/index.html", {
@@ -73,7 +93,7 @@ def create_listing(request):
             title = request.POST["title"]
             startBid = request.POST["starting_bid"]
             url = request.POST["url"]
-            AuctionListing.objects.create(title=title, description=description, startBid=startBid, user=user, url=url, category=category)
+            AuctionListing.objects.create(title=title, description=description, startBid=startBid, seller=user, url=url, category=category)
             return render(request, 'auctions/create_listing.html', {
                 "message": "Listing created successfuly!"
             })
@@ -85,10 +105,17 @@ def create_listing(request):
         return render(request, "auctions/create_listing.html")
     
 def listings(request, listing_id):
-    listing = AuctionListing.objects.get(pk=listing_id)
-    print(listing.watchers.all())
+    auction = AuctionListing.objects.get(pk=listing_id)
+    print(auction.watchers.all())
+
+    # Get info about bids
+    bid_amount = Bid.objects.filter(auction=listing_id).count()
+    highest_bid = Bid.objects.filter(auction=listing_id).order_by('-price').first()
+
     return render(request, "auctions/listings.html", {
-        "listing": listing
+        "auction": auction,
+        "bid_form": BidForm(),
+        "bid_amount": bid_amount
     })
 
 def addRemoveWatchlist(request, listing_id):
@@ -110,3 +137,47 @@ def watchlist(request):
     return render(request, "auctions/index.html", {
             "auctions": watchlist
         })
+
+@login_required(login_url="auctions:login")
+def bid(request):
+    # Bid view: only POST methos allowed, handles bidding logic.
+    if request.method == "POST":
+        form = BidForm(request.POST)
+        if form.is_valid():
+            price = float(form.cleaned_data["price"])
+            auction_id = request.POST.get("auction_id")
+
+            auction = AuctionListing.objects.get(pk=auction_id)
+            user = User.objects.get(id=request.user.id)
+
+            if auction.seller == user:
+                return render(request, "auctions/error_handling.html", {
+                    "code": 400,
+                    "message": "Seller cannot bid"
+                })
+            
+            highest_bid = Bid.objects.filter(auction=auction).order_by('-price').first()
+            if highest_bid is None or price > highest_bid.price:
+                # Add new bid to db
+                new_bid = Bid(auction=auction, user=user, price=price)
+                new_bid.save()
+
+                # Update current highest price
+                auction.currentPrice = price
+                auction.save()
+
+                return HttpResponseRedirect(f"listings/{auction_id}")
+            else:
+                return render(request, "auctions/error_handling.html", {
+                    "code": 400,
+                    "message": "your bid is too small"
+                })
+        else:
+            return render(request, "auctions/error_handling.html", {
+                "code": 400,
+                "message": "Form is invalid"
+            })
+    return render(request, "auctions/error_handling.html", {
+        "code": 405,
+        "message": "Method Not Allowed"
+    })

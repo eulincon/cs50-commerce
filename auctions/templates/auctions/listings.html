@@ -1,20 +1,35 @@
 {% extends "auctions/layout.html" %} {% block body %}
-<h2>Listing: {{ listing.title }}</h2>
+<h2>Auction: {{ auction.title }}</h2>
 <ul>
-  <p>Description: {{ listing.description }}</p>
-  <p>Price: {{ listing.startBid }}</p>
-  <p>Image: {{ listing.url }}</p>
-  <img height="100" src="{{listing.url}}" alt="" />
-  <p>Category: {{ listing.category }}</p>
-  <p>Listed by: {{ listing.user.username }}</p>
+  <p>Description: {{ auction.description }}</p>
+  <p>Price: {{ auction.startBid }}</p>
+  <p>Image: {{ auction.url }}</p>
+  <img height="100" src="{{auction.url}}" alt="" />
+  <p>Category: {{ auction.category }}</p>
+  <p>Listed by: {{ auction.seller.username }}</p>
 </ul>
-<form action="{% url 'listings' listing.id %}" method="post">
+
+{% comment %} Bid info and form {% endcomment %}
+<div class="list-group-item text-muted">
+  {% if bid_amount != 0 %}
+    <small>{{ bid_amount }} bid(s) so far. {{ bid_message }}</small>
+  {% else %}
+    <small>No bids so far.</small>
+  {% endif %}
+{% if user.is_authenticated and user.id != auction.seller.id %}
+<form action="{% url 'bid' %}" method="post">
   {% csrf_token %}
-  <input class="form-control mb-2" type="text" name="bid" placeholder="Bid" />
-  <input class="btn btn-primary" type="submit" value="Place Bid" />
+  <div class="form-group row">
+    <div class="col-sm-10 col-8">{{ bid_form }}</div>
+    <input class="btn btn-primary" type="submit" value="Place Bid" />
+    <input type="hidden" name="next" value="{{ request.path }}" />
+    <input type="hidden" name="auction_id" value="{{ auction.id }}" />
+  </div>
 </form>
-<form action="{% url 'addRemoveWatchlist' listing.id %}" method="POST">
-  {% csrf_token %} {% if user in listing.watchers.all %}
+{% endif %}
+
+<form action="{% url 'addRemoveWatchlist' auction.id %}" method="POST">
+  {% csrf_token %} {% if user in auction.watchers.all %}
   <input class="btn btn-primary" type="submit" value="Remove Watchlist" />
   {% else %}
   <input class="btn btn-primary" type="submit" value="Add Watchlist" />

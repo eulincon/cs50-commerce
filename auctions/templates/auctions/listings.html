@@ -1,5 +1,11 @@
 {% extends "auctions/layout.html" %} {% block body %}
-<h2>Auction: {{ auction.title }}</h2>
+<h2>Auction: {{ auction.title }} 
+  {% if auction.closed %}
+    <span class="badge badge-danger">Closed</span>
+  {% else %}
+    <span class="badge badge-primary">Open</span>
+  {% endif %}
+</h2> 
 <ul>
   <p>Description: {{ auction.description }}</p>
   <p>Price: {{ auction.startBid }}</p>
@@ -8,6 +14,12 @@
   <p>Category: {{ auction.category }}</p>
   <p>Listed by: {{ auction.seller.username }}</p>
 </ul>
+
+{% if auction.closed and highest_bid != null %}
+  <strong class="text-success">Winner: {{ highest_bid.user.username }}</strong>
+{% elif auction.closed %}
+  <strong class="text-warning">No Winner, no bid for this auction</strong>
+{% endif %}
 
 {% comment %} Bid info and form {% endcomment %}
 <div class="list-group-item text-muted">
@@ -27,7 +39,13 @@
   </div>
 </form>
 {% endif %}
-
+{% comment %} Close auction button {% endcomment %}
+{% if user.id == auction.seller.id and auction.closed == False %}
+<form action="{% url 'close_auction' auction.id %}" method="POST">
+  {% csrf_token %}
+  <input type="submit" class="btn btn-danger" value="Close auction" name="close_auction">
+</form>
+{% endif %}
 <form action="{% url 'addRemoveWatchlist' auction.id %}" method="POST">
   {% csrf_token %} {% if user in auction.watchers.all %}
   <input class="btn btn-primary" type="submit" value="Remove Watchlist" />

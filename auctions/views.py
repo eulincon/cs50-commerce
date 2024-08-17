@@ -29,7 +29,7 @@ class BidForm(forms.ModelForm):
 
 def index(request):
     return render(request, "auctions/index.html", {
-        "auctions": AuctionListing.objects.all()
+        "auctions": AuctionListing.objects.filter(closed=False).order_by("-createdAt")
     })
 
 
@@ -115,7 +115,8 @@ def listings(request, listing_id):
     return render(request, "auctions/listings.html", {
         "auction": auction,
         "bid_form": BidForm(),
-        "bid_amount": bid_amount
+        "bid_amount": bid_amount,
+        "highest_bid": highest_bid
     })
 
 def addRemoveWatchlist(request, listing_id):
@@ -137,6 +138,33 @@ def watchlist(request):
     return render(request, "auctions/index.html", {
             "auctions": watchlist
         })
+
+@login_required(login_url="auctions:login")
+def closeAuction(request, auction_id):
+    try: 
+        auction = AuctionListing.objects.get(pk=auction_id)
+    except AuctionListing.DoesNotExist:
+        return render(request, "auctions/error_handling.html", {
+            "code": 404,
+            "message": "Auction id doesn't exist"
+        })
+    
+    # Get info about bids
+    bid_amount = Bid.objects.filter(auction=auction_id).count()
+    highest_bid = Bid.objects.filter(auction=auction_id).order_by('-price').first()
+    
+    #Close auction
+    if request.method == "POST":
+        auction.closed = True
+        auction.watchers.clear()
+        auction.save()
+    else:
+        return render(request, "auctions/error_handling.html", {
+            "code": 405,
+            "message": "Method not allowed"
+        })
+    
+    return HttpResponseRedirect("/", auction_id)
 
 @login_required(login_url="auctions:login")
 def bid(request):

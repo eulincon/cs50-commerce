@@ -50,5 +50,14 @@ class Bid(models.Model):
     def __str__(self):
         return f"{self.user} bid {self.price} $ on {self.auction}"
 
-# class Comment():
-#     pass
+class Comment(models.Model):
+    auction = models.ForeignKey(AuctionListing, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    comment = models.TextField(blank=False)
+    comment_date = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        verbose_name = "comment"
+        verbose_name_plural = "comments"
+
+    def __str__(self) -> str:
+        return f"Comment {self>id} on auction {self.auction} made by {self.user}"

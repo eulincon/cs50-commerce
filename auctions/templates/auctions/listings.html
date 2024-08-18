@@ -28,7 +28,7 @@
   {% else %}
     <small>No bids so far.</small>
   {% endif %}
-{% if user.is_authenticated and user.id != auction.seller.id %}
+{% if user.is_authenticated and user.id != auction.seller.id and auction.closed == False %}
 <form action="{% url 'bid' %}" method="post">
   {% csrf_token %}
   <div class="form-group row">
@@ -53,4 +53,36 @@
   <input class="btn btn-primary" type="submit" value="Add Watchlist" />
   {% endif %}
 </form>
+
+<div class="card">
+  <div class="card-body">
+    <h4 class="card-title">Comments</h4>
+    <p class="card-text">
+      <div class="comment-section mb-4">
+        {% for comment in comments %}
+        <div class="single-comment mb-3">
+          <div class="comment-text">
+            {{ comment.comment }}
+          </div>
+          <div class="comment-author">
+            ~ {{ comment.user.username }}
+          </div>
+          <small>{{ comment.comment_date }}</small>
+        </div>
+        {% empty %}
+        <div class="no-comment">
+          No comments yet
+        </div>
+        {% endfor %}
+      </div>
+      <form action="{% url 'handle_comment' auction.id %}" method="POST">
+        {% csrf_token %}
+        <div class="mb-2">
+          {{ comment_form }}
+        </div>
+        <input type="submit" value="Comment" class="btn btn-primary btn-new-blue" style="float: right;">
+      </form>
+    </p>
+  </div>
+</div>
 {% endblock %}

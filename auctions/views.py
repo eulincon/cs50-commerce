@@ -7,7 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
 from django import forms
 
-from .models import User, AuctionListing, Bid
+from .models import User, AuctionListing, Bid, Comment
 
 
 class BidForm(forms.ModelForm):
@@ -24,6 +24,23 @@ class BidForm(forms.ModelForm):
                 "min": 0.01,
                 "max": 1000000000,
                 "class": "form-control"
+            })
+        }
+
+class CommentForm(forms.ModelForm):
+    # Created form for Comment model.
+
+    class Meta:
+        model = Comment
+        fields = ["comment"]
+        labels = {
+            "comment": _("")
+        }
+        widgets = {
+            "comment": forms.Textarea(attrs={
+                "placeholder": "Comment here",
+                "class": "form-control",
+                "rows": 1
             })
         }
 
@@ -112,11 +129,16 @@ def listings(request, listing_id):
     bid_amount = Bid.objects.filter(auction=listing_id).count()
     highest_bid = Bid.objects.filter(auction=listing_id).order_by('-price').first()
 
+    #Get all the comments
+    comments = Comment.objects.filter(auction=listing_id)
+
     return render(request, "auctions/listings.html", {
         "auction": auction,
         "bid_form": BidForm(),
         "bid_amount": bid_amount,
-        "highest_bid": highest_bid
+        "highest_bid": highest_bid,
+        "comments": comments, 
+        "comment_form": CommentForm()
     })
 
 def addRemoveWatchlist(request, listing_id):
@@ -165,6 +187,43 @@ def closeAuction(request, auction_id):
         })
     
     return HttpResponseRedirect("/", auction_id)
+
+@login_required(login_url="auctions:login")
+def handle_comment(request, auction_id):
+    try:
+        auction = AuctionListing.objects.get(pk=auction_id)
+    except AuctionListing.DoesNotExist:
+        return render(request, "auctions/error_handling.html", {
+            "code": 404,
+            "message": "Auction id doesn't exist"
+        })
+    
+    if request.method == "POST":
+        form = CommentForm(request.POST)
+        if form.is_valid():
+            # Get all data from the form
+            comment = form.cleaned_data["comment"]
+
+            # Save a record
+            comment = Comment(
+                user = User.objects.get(pk=request.user.id),
+                comment = comment,
+                auction = auction
+            )
+            comment.save()
+        else:
+            return render(request, "auctions/error_handling.html", {
+                "code": 400,
+                "message": "Form is invalid"
+            })
+    elif request.methos == "GET":
+        return render(request, "auctions/error_handlig.html", {
+            "code": 405,
+            "message": "Method Not Allowed"
+        })
+    return HttpResponseRedirect("/" + auction_id)
+        
+
 
 @login_required(login_url="auctions:login")
 def bid(request):

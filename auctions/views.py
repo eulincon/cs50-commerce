@@ -1,17 +1,53 @@
 from django.contrib.auth import authenticate, login, logout
 from django.db import IntegrityError
+from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
+from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
+from django import forms
 
-from .models import User, AuctionListing
+from .models import User, AuctionListing, Bid, Comment
 
+
+class BidForm(forms.ModelForm):
+    # Creates form for Bid model.
+    class Meta:
+        model = Bid
+        fields = ["price"]
+        labels = {
+            "price": _("")
+        }
+        widgets = {
+            "price": forms.NumberInput(attrs={
+                "placeholder": "Bid",
+                "min": 0.01,
+                "max": 1000000000,
+                "class": "form-control"
+            })
+        }
+
+class CommentForm(forms.ModelForm):
+    # Created form for Comment model.
+
+    class Meta:
+        model = Comment
+        fields = ["comment"]
+        labels = {
+            "comment": _("")
+        }
+        widgets = {
+            "comment": forms.Textarea(attrs={
+                "placeholder": "Comment here",
+                "class": "form-control",
+                "rows": 1
+            })
+        }
 
 def index(request):
     return render(request, "auctions/index.html", {
-        "auctions": AuctionListing.objects.all()
+        "auctions": AuctionListing.objects.filter(closed=False).order_by("-createdAt")
     })
-
 
 def login_view(request):
     if request.method == "POST":
@@ -32,11 +68,9 @@ def login_view(request):
     else:
         return render(request, "auctions/login.html")
 
-
 def logout_view(request):
     logout(request)
     return HttpResponseRedirect(reverse("index"))
-
 
 def register(request):
     if request.method == "POST":
@@ -73,22 +107,38 @@ def create_listing(request):
             title = request.POST["title"]
             startBid = request.POST["starting_bid"]
             url = request.POST["url"]
-            AuctionListing.objects.create(title=title, description=description, startBid=startBid, user=user, url=url, category=category)
+            AuctionListing.objects.create(title=title, description=description, startBid=startBid, seller=user, url=url, category=category)
             return render(request, 'auctions/create_listing.html', {
-                "message": "Listing created successfuly!"
+                "message": "Listing created successfuly!",
+                "categories": AuctionListing.CATEGORY
             })
         # except Exception:
         #     return render(request, 'auctions/create_listing.html', {
         #         "message": "Error on creating listing!"
         #     })
     else:
-        return render(request, "auctions/create_listing.html")
+        return render(request, "auctions/create_listing.html", {
+            "categories": AuctionListing.CATEGORY
+        })
     
 def listings(request, listing_id):
-    listing = AuctionListing.objects.get(pk=listing_id)
-    print(listing.watchers.all())
+    auction = AuctionListing.objects.get(pk=listing_id)
+    print(auction.watchers.all())
+
+    # Get info about bids
+    bid_amount = Bid.objects.filter(auction=listing_id).count()
+    highest_bid = Bid.objects.filter(auction=listing_id).order_by('-price').first()
+
+    #Get all the comments
+    comments = Comment.objects.filter(auction=listing_id)
+
     return render(request, "auctions/listings.html", {
-        "listing": listing
+        "auction": auction,
+        "bid_form": BidForm(),
+        "bid_amount": bid_amount,
+        "highest_bid": highest_bid,
+        "comments": comments, 
+        "comment_form": CommentForm()
     })
 
 def addRemoveWatchlist(request, listing_id):
@@ -110,3 +160,138 @@ def watchlist(request):
     return render(request, "auctions/index.html", {
             "auctions": watchlist
         })
+
+@login_required(login_url="auctions:login")
+def closeAuction(request, auction_id):
+    try: 
+        auction = AuctionListing.objects.get(pk=auction_id)
+    except AuctionListing.DoesNotExist:
+        return render(request, "auctions/error_handling.html", {
+            "code": 404,
+            "message": "Auction id doesn't exist"
+        })
+    
+    # Get info about bids
+    bid_amount = Bid.objects.filter(auction=auction_id).count()
+    highest_bid = Bid.objects.filter(auction=auction_id).order_by('-price').first()
+    
+    #Close auction
+    if request.method == "POST":
+        auction.closed = True
+        auction.watchers.clear()
+        auction.save()
+    else:
+        return render(request, "auctions/error_handling.html", {
+            "code": 405,
+            "message": "Method not allowed"
+        })
+    
+    return HttpResponseRedirect("/", auction_id)
+
+@login_required(login_url="auctions:login")
+def handle_comment(request, auction_id):
+    try:
+        auction = AuctionListing.objects.get(pk=auction_id)
+    except AuctionListing.DoesNotExist:
+        return render(request, "auctions/error_handling.html", {
+            "code": 404,
+            "message": "Auction id doesn't exist"
+        })
+    
+    if request.method == "POST":
+        form = CommentForm(request.POST)
+        if form.is_valid():
+            # Get all data from the form
+            comment = form.cleaned_data["comment"]
+
+            # Save a record
+            comment = Comment(
+                user = User.objects.get(pk=request.user.id),
+                comment = comment,
+                auction = auction
+            )
+            comment.save()
+        else:
+            return render(request, "auctions/error_handling.html", {
+                "code": 400,
+                "message": "Form is invalid"
+            })
+    elif request.methos == "GET":
+        return render(request, "auctions/error_handlig.html", {
+            "code": 405,
+            "message": "Method Not Allowed"
+        })
+    return HttpResponseRedirect(f"/listings/{auction_id}")
+
+@login_required(login_url="auctions:login")
+def bid(request):
+    # Bid view: only POST methos allowed, handles bidding logic.
+    if request.method == "POST":
+        form = BidForm(request.POST)
+        if form.is_valid():
+            price = float(form.cleaned_data["price"])
+            auction_id = request.POST.get("auction_id")
+
+            auction = AuctionListing.objects.get(pk=auction_id)
+            user = User.objects.get(id=request.user.id)
+
+            if auction.seller == user:
+                return render(request, "auctions/error_handling.html", {
+                    "code": 400,
+                    "message": "Seller cannot bid"
+                })
+            
+            highest_bid = Bid.objects.filter(auction=auction).order_by('-price').first()
+            if highest_bid is None or price > highest_bid.price:
+                # Add new bid to db
+                new_bid = Bid(auction=auction, user=user, price=price)
+                new_bid.save()
+
+                # Update current highest price
+                auction.currentPrice = price
+                auction.save()
+
+                return HttpResponseRedirect(f"listings/{auction_id}")
+            else:
+                return render(request, "auctions/error_handling.html", {
+                    "code": 400,
+                    "message": "your bid is too small"
+                })
+        else:
+            return render(request, "auctions/error_handling.html", {
+                "code": 400,
+                "message": "Form is invalid"
+            })
+    return render(request, "auctions/error_handling.html", {
+        "code": 405,
+        "message": "Method Not Allowed"
+    })
+
+def categories(request, category=None):
+    """Categories view: shows all categories and allowes filter auction by category."""
+    categories_list = AuctionListing.CATEGORY
+
+    # Check if valid category as URL parameter
+    if category is not None:
+        if category in [x[0] for x in categories_list]:
+            category_full = [x[1] for x in categories_list if x[0] == category][0]
+
+            # Get all auctions from this category
+            auctions = AuctionListing.objects.filter(category=category, closed=False)
+            return render(request, "auctions/category.html", {
+                "auctions": auctions,
+                "category_full": category_full
+            })
+        else:
+            return render(request, "auctions/error_handling.html", {
+                "code": 400,
+                "message": "Category is incorrect"
+            })
+    else:
+        return render(request, "auctions/categories.html", {
+            "categories": categories_list
+        })
+    return render(request, "auctions/error_handling.html",{
+        "code": 404,
+        "message": "This page does not exist"
+    })

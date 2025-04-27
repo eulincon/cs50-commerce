@@ -1,0 +1,61 @@
+{% extends "auctions/layout.html" %}
+
+{% block body %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="text-center">Categories</h2>
+            <p class="text-center text-muted">Browse listings by category</p>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for category_code, category_name in categories %}
+            <div class="col-md-4 col-lg-3 mb-4">
+                <a href="{% url 'categories' category=category_code %}" class="text-decoration-none">
+                    <div class="card h-100 shadow-sm hover-shadow">
+                        <div class="card-body text-center">
+                            <h5 class="card-title mb-3">{{ category_name }}</h5>
+                            <div class="category-icon mb-3">
+                                {% if category_code == 'MOT' %}
+                                    <i class="fas fa-car fa-3x text-primary"></i>
+                                {% elif category_code == 'FAS' %}
+                                    <i class="fas fa-tshirt fa-3x text-primary"></i>
+                                {% elif category_code == 'ELE' %}
+                                    <i class="fas fa-laptop fa-3x text-primary"></i>
+                                {% elif category_code == 'ART' %}
+                                    <i class="fas fa-palette fa-3x text-primary"></i>
+                                {% elif category_code == 'HGA' %}
+                                    <i class="fas fa-home fa-3x text-primary"></i>
+                                {% elif category_code == 'SPO' %}
+                                    <i class="fas fa-futbol fa-3x text-primary"></i>
+                                {% elif category_code == 'TOY' %}
+                                    <i class="fas fa-gamepad fa-3x text-primary"></i>
+                                {% elif category_code == 'BUS' %}
+                                    <i class="fas fa-briefcase fa-3x text-primary"></i>
+                                {% elif category_code == 'MUS' %}
+                                    <i class="fas fa-music fa-3x text-primary"></i>
+                                {% endif %}
+                            </div>
+                            <p class="text-muted mb-0">View all {{ category_name }} listings</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+    .hover-shadow {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .hover-shadow:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    }
+    .category-icon {
+        color: var(--primary);
+    }
+</style>
+{% endblock %}

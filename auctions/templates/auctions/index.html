@@ -1,16 +1,18 @@
 {% extends "auctions/layout.html" %}
 
 {% block body %}
-    <h2>Active Listings</h2>
-    <ul>
+<div class="container">
+    <h2 class="mb-4">Active Listings</h2>
+    <div class="row">
         {% for auction in auctions %}
-        <p>Title: {{ auction.title }}</p>
-        <p>Description: {{ auction.description }}</p>
-        <p>Price: {{ auction.startBid }}</p>
-        <p>Image: {{ auction.url }}</p>
-        <img height="100" src={{auction.url}} alt="">
-        <p>Category: {{ auction.category }}</p>
+            <div class="col-md-6 col-lg-4 d-flex align-items-stretch">
+                {% include "auctions/partials/listing_layout.html" with auction=auction %}
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <div class="alert alert-info">No active listings at the moment.</div>
+            </div>
         {% endfor %}
-    </ul>
-    TODO
+    </div>
+</div>
 {% endblock %}

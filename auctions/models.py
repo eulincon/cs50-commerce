@@ -60,4 +60,4 @@ class Comment(models.Model):
         verbose_name_plural = "comments"
 
     def __str__(self) -> str:
-        return f"Comment {self>id} on auction {self.auction} made by {self.user}"
+        return f"Comment {self.id} on auction {self.auction} made by {self.user}"

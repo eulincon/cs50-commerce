@@ -49,7 +49,6 @@ def index(request):
         "auctions": AuctionListing.objects.filter(closed=False).order_by("-createdAt")
     })
 
-
 def login_view(request):
     if request.method == "POST":
 
@@ -69,11 +68,9 @@ def login_view(request):
     else:
         return render(request, "auctions/login.html")
 
-
 def logout_view(request):
     logout(request)
     return HttpResponseRedirect(reverse("index"))
-
 
 def register(request):
     if request.method == "POST":
@@ -112,14 +109,17 @@ def create_listing(request):
             url = request.POST["url"]
             AuctionListing.objects.create(title=title, description=description, startBid=startBid, seller=user, url=url, category=category)
             return render(request, 'auctions/create_listing.html', {
-                "message": "Listing created successfuly!"
+                "message": "Listing created successfuly!",
+                "categories": AuctionListing.CATEGORY
             })
         # except Exception:
         #     return render(request, 'auctions/create_listing.html', {
         #         "message": "Error on creating listing!"
         #     })
     else:
-        return render(request, "auctions/create_listing.html")
+        return render(request, "auctions/create_listing.html", {
+            "categories": AuctionListing.CATEGORY
+        })
     
 def listings(request, listing_id):
     auction = AuctionListing.objects.get(pk=listing_id)
@@ -221,9 +221,7 @@ def handle_comment(request, auction_id):
             "code": 405,
             "message": "Method Not Allowed"
         })
-    return HttpResponseRedirect("/" + auction_id)
-        
-
+    return HttpResponseRedirect(f"/listings/{auction_id}")
 
 @login_required(login_url="auctions:login")
 def bid(request):
@@ -267,4 +265,33 @@ def bid(request):
     return render(request, "auctions/error_handling.html", {
         "code": 405,
         "message": "Method Not Allowed"
+    })
+
+def categories(request, category=None):
+    """Categories view: shows all categories and allowes filter auction by category."""
+    categories_list = AuctionListing.CATEGORY
+
+    # Check if valid category as URL parameter
+    if category is not None:
+        if category in [x[0] for x in categories_list]:
+            category_full = [x[1] for x in categories_list if x[0] == category][0]
+
+            # Get all auctions from this category
+            auctions = AuctionListing.objects.filter(category=category, closed=False)
+            return render(request, "auctions/category.html", {
+                "auctions": auctions,
+                "category_full": category_full
+            })
+        else:
+            return render(request, "auctions/error_handling.html", {
+                "code": 400,
+                "message": "Category is incorrect"
+            })
+    else:
+        return render(request, "auctions/categories.html", {
+            "categories": categories_list
+        })
+    return render(request, "auctions/error_handling.html",{
+        "code": 404,
+        "message": "This page does not exist"
     })
